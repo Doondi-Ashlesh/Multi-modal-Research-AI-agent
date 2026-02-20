@@ -1,0 +1,17 @@
+# Multi-modal Research AI Agent
+# Python 3.10+
+
+# LLM & API
+openai>=1.12.0
+python-dotenv>=1.0.0
+
+# Documents & multimodal
+pypdf>=4.0.0
+Pillow>=10.0.0
+
+# Web search for research
+duckduckgo-search>=4.0.0
+
+# Optional: vector store for RAG (uncomment if needed)
+# chromadb>=0.4.0
+# sentence-transformers>=2.2.0
