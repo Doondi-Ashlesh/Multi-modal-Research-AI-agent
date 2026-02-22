@@ -12,6 +12,6 @@ Pillow>=10.0.0
 # Web search for research
 duckduckgo-search>=4.0.0
 
-# Optional: vector store for RAG (uncomment if needed)
-# chromadb>=0.4.0
-# sentence-transformers>=2.2.0
+# RAG knowledge base
+chromadb>=0.4.0
+sentence-transformers>=2.2.0

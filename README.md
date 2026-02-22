@@ -9,6 +9,8 @@ A research assistant that understands **text**, **images**, and **documents** (P
   - **load_document** – Load and extract text from files.
   - **summarize_document** – Summarize long documents.
   - **web_search** – Search the web for current information.
+  - **search_academic_papers** – Find papers by topic (Semantic Scholar + arXiv).
+  - **retrieve_from_knowledge_base** – RAG: search a pre-indexed corpus (Chroma + sentence-transformers).
 - **Agent loop**: The model can call these tools in sequence to gather and synthesize information before answering.
 
 ## Setup
@@ -25,15 +27,22 @@ A research assistant that understands **text**, **images**, and **documents** (P
 3. **Install dependencies**  
    `pip install -r requirements.txt`
 
-4. **Configure API key**  
-   Copy `.env.example` to `.env` and set your OpenAI API key (or compatible API):
+4. **Configure your LLM**  
+   Copy `.env.example` to `.env`. Choose one:
 
-   ```
-   OPENAI_API_KEY=sk-...
-   OPENAI_MODEL=gpt-4o
-   ```
+   - **Free (Ollama, local):** Install [Ollama](https://ollama.com), run `ollama pull llama3.2`, then in `.env` set:
+     ```
+     OPENAI_API_BASE=http://localhost:11434/v1
+     OPENAI_MODEL=llama3.2
+     ```
+     Leave `OPENAI_API_KEY` empty. The agent uses tool-calling; Ollama’s `llama3.2` and many other models support it.
 
-   Use a vision-capable model (e.g. `gpt-4o`, `gpt-4o-mini`) to analyze images.
+   - **Paid (OpenAI):** Set `OPENAI_API_KEY=sk-...` and `OPENAI_MODEL=gpt-4o` (or another model). Use a vision-capable model if you attach images.
+
+**Notes**
+
+- **PATH warning:** If pip warns about script location, you can add the venv `Scripts` folder to your PATH or run `pip install --no-warn-script-location -r requirements.txt`.
+- **protobuf / TensorFlow:** If you see a dependency conflict with `tensorflow-intel` and `protobuf`, use a **dedicated venv** for this project (recommended). That keeps this project’s dependencies separate so TensorFlow elsewhere is unaffected.
 
 ## Usage
 
@@ -41,6 +50,12 @@ A research assistant that understands **text**, **images**, and **documents** (P
 
 ```bash
 python main.py "What are the main conclusions of recent papers on LLM agents?"
+```
+
+**Find papers on a topic** (agent uses Semantic Scholar + arXiv):
+
+```bash
+python main.py "Find relevant papers on transformer architectures for vision"
 ```
 
 **With files (PDFs or images):**
@@ -58,6 +73,19 @@ python main.py -i
 
 Then type your question and, when prompted, optional file paths (comma-separated).
 
+**RAG (knowledge base):** Index PDFs or text files, then ask questions over them. The agent will call `retrieve_from_knowledge_base` when relevant.
+
+```bash
+# Index a file or a directory of PDFs/.txt files
+python main.py index paper.pdf
+python main.py index -f ./papers
+
+# Then ask questions; the agent can search the indexed docs
+python main.py "What did we conclude about X in our indexed documents?"
+```
+
+Index data is stored under `data/chroma/`.
+
 ## Project structure
 
 ```
@@ -73,14 +101,15 @@ Multi modal AI agent/
     ├── agent.py         # Agent loop and tool orchestration
     └── tools/
         ├── __init__.py
-        ├── documents.py # load_document, summarize_document
-        └── search.py    # web_search (DuckDuckGo)
+        ├── academic_papers.py # search_academic_papers (Semantic Scholar, arXiv)
+        ├── documents.py       # load_document, summarize_document
+        ├── rag.py             # RAG: index + retrieve_from_knowledge_base
+        └── search.py          # web_search (DuckDuckGo)
 ```
 
 ## Optional
 
 - **Azure / other OpenAI-compatible APIs**: Set `OPENAI_API_BASE` in `.env`.
-- **RAG (vector store)**: Add `chromadb` and `sentence-transformers` to `requirements.txt` and implement a “retrieve” tool that queries your index.
 
 ## License
 

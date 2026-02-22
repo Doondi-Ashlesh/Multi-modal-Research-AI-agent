@@ -1,17 +1,28 @@
 """RAG tool: retrieve from a pre-indexed knowledge base (Chroma + sentence-transformers)."""
 from pathlib import Path
-import re
 
-try:
-    import chromadb
-    from chromadb.config import Settings
-    from sentence_transformers import SentenceTransformer
-    HAS_RAG_DEPS = True
-except ImportError:
-    HAS_RAG_DEPS = False
+# Lazy-load chromadb/sentence_transformers (they pull in TensorFlow) so they're only
+# imported when RAG is actually used, avoiding TF/protobuf noise for paper search etc.
+HAS_RAG_DEPS = None
+_chromadb = _Settings = _SentenceTransformer = None
 
-from ..config import PROJECT_ROOT
-from ..multimodal import load_pdf_text, load_text, IMAGE_EXTENSIONS
+
+def _ensure_rag_deps():
+    global HAS_RAG_DEPS, _chromadb, _Settings, _SentenceTransformer
+    if HAS_RAG_DEPS is not None:
+        return HAS_RAG_DEPS
+    try:
+        import chromadb
+        from chromadb.config import Settings
+        from sentence_transformers import SentenceTransformer
+        _chromadb = chromadb
+        _Settings = Settings
+        _SentenceTransformer = SentenceTransformer
+        HAS_RAG_DEPS = True
+        return True
+    except ImportError:
+        HAS_RAG_DEPS = False
+        return False
 
 # Default collection and persist directory
 RAG_PERSIST_DIR = PROJECT_ROOT / "data" / "chroma"
@@ -38,13 +49,13 @@ def _chunk_text(text: str) -> list[str]:
 
 
 def _get_client_and_embedder():
-    if not HAS_RAG_DEPS:
+    if not _ensure_rag_deps():
         raise RuntimeError(
             "RAG dependencies missing. Install with: pip install chromadb sentence-transformers"
         )
     RAG_PERSIST_DIR.mkdir(parents=True, exist_ok=True)
-    client = chromadb.PersistentClient(path=str(RAG_PERSIST_DIR), settings=Settings(anonymized_telemetry=False))
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    client = _chromadb.PersistentClient(path=str(RAG_PERSIST_DIR), settings=_Settings(anonymized_telemetry=False))
+    model = _SentenceTransformer("all-MiniLM-L6-v2")
     return client, model
 
 
@@ -115,7 +126,7 @@ def retrieve_from_knowledge_base(query: str, n_results: int = 5) -> str:
     Search the pre-indexed knowledge base for passages relevant to the query.
     Use when the user has added documents to the knowledge base and you need to find relevant context.
     """
-    if not HAS_RAG_DEPS:
+    if not _ensure_rag_deps():
         return (
             "RAG is not available. Install with: pip install chromadb sentence-transformers"
         )

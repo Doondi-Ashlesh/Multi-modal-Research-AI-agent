@@ -3,7 +3,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
-from ..config import OPENAI_API_KEY, OPENAI_API_BASE, OPENAI_MODEL
+from ..config import get_api_key, OPENAI_API_BASE, OPENAI_MODEL
 from ..multimodal import (
     IMAGE_EXTENSIONS,
     load_pdf_text,
@@ -12,7 +12,7 @@ from ..multimodal import (
 
 
 def _client() -> OpenAI:
-    kwargs = {"api_key": OPENAI_API_KEY}
+    kwargs = {"api_key": get_api_key()}
     if OPENAI_API_BASE:
         kwargs["base_url"] = OPENAI_API_BASE
     return OpenAI(**kwargs)

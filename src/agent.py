@@ -3,9 +3,15 @@ from typing import Any
 
 from openai import OpenAI
 
-from .config import OPENAI_API_KEY, OPENAI_API_BASE, OPENAI_MODEL, MAX_AGENT_STEPS
+from .config import get_api_key, OPENAI_API_BASE, OPENAI_MODEL, MAX_AGENT_STEPS
 from .multimodal import build_message_content
-from .tools import load_document, summarize_document, web_search
+from .tools import (
+    load_document,
+    retrieve_from_knowledge_base,
+    search_academic_papers,
+    summarize_document,
+    web_search,
+)
 
 
 # Tool implementations for the agent
@@ -13,6 +19,8 @@ TOOL_IMPLEMENTATIONS = {
     "load_document": load_document,
     "summarize_document": summarize_document,
     "web_search": web_search,
+    "search_academic_papers": search_academic_papers,
+    "retrieve_from_knowledge_base": retrieve_from_knowledge_base,
 }
 
 OPENAI_TOOLS = [
@@ -60,11 +68,42 @@ OPENAI_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_academic_papers",
+            "description": "Search for academic papers by topic (Semantic Scholar and arXiv). Use when the user wants to find relevant papers, do a literature search, or discover research on a topic. Prefer this over web_search for paper discovery.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Topic or research question to search for."},
+                    "max_results": {"type": "integer", "description": "Maximum number of papers to return.", "default": 10},
+                    "source": {"type": "string", "description": "Source: 'both' (default), 'semantic_scholar', or 'arxiv'.", "default": "both"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "retrieve_from_knowledge_base",
+            "description": "Search the pre-indexed knowledge base for relevant passages. Use when the user has indexed documents and you need to find context from their private docs.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Search query for semantic retrieval."},
+                    "n_results": {"type": "integer", "description": "Number of passages to return.", "default": 5},
+                },
+                "required": ["query"],
+            },
+        },
+    },
 ]
 
 
 def _client() -> OpenAI:
-    kwargs = {"api_key": OPENAI_API_KEY}
+    kwargs = {"api_key": get_api_key()}
     if OPENAI_API_BASE:
         kwargs["base_url"] = OPENAI_API_BASE
     return OpenAI(**kwargs)
@@ -98,8 +137,10 @@ def run_research(
 - Load and analyze documents (PDF, text, images) when the user provides file paths or asks about files.
 - Summarize long documents.
 - Search the web for current information when needed.
+- Search for academic papers (Semantic Scholar, arXiv) when the user wants literature or paper discovery.
+- Search the pre-indexed knowledge base (RAG) when the user has indexed documents.
 
-Use tools when they would improve your answer. Cite sources when you use web_search or document content. If the user attaches images or PDFs, analyze them and respond accordingly. Be concise but thorough."""
+Use tools when they would improve your answer. Prefer search_academic_papers over web_search for finding papers. Cite sources when you use web_search or document content. If the user attaches images or PDFs, analyze them and respond accordingly. Be concise but thorough."""
 
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt or default_system},
