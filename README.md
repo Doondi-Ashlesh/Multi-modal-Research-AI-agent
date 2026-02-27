@@ -107,10 +107,3 @@ Multi modal AI agent/
         └── search.py          # web_search (DuckDuckGo)
 ```
 
-## Optional
-
-- **Azure / other OpenAI-compatible APIs**: Set `OPENAI_API_BASE` in `.env`.
-
-## License
-
-Use and modify as you like.
